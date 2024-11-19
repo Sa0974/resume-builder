@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Template</title>
+    <link rel="stylesheet" href="firsttemplate.css">
+
+    <!-- Add jsPDF and html2pdf CDN links -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.js"></script>
+</head>
+<body>
+    <!-- Header Section (Same as index.html) -->
+    <header>
+        <nav>
+            <div class="toggle-button" id="toggle-button">  
+                &#9776; <!-- This is the hamburger icon -->  
+            </div> 
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="firsttemplate.html">Resume</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="resume">
+            <div class="header">
+                <div class="img-area" id="img-area">
+                    <img id="profile-image" src="" alt="Profile Image">
+                    <input type="file" id="edit-profile-image" accept="image/*" style="display: none;">
+                </div>
+                <h1 contenteditable="true" id="name">John Doe</h1>
+                <h3 contenteditable="true" id="title">Web Developer</h3>
+            </div>
+
+            <h2>Personal Information</h2>
+            <p contenteditable="true" id="email">johndoe@example.com</p>
+            <p contenteditable="true" id="phone">123-456-7890</p>
+            <p contenteditable="true" id="age">Age: 30</p>
+
+            <h2>Skills</h2>
+            <ul id="skills-list">
+                <li contenteditable="true">JavaScript</li>
+                <li contenteditable="true">CSS</li>
+                <li contenteditable="true">HTML</li>
+            </ul>
+
+            <h2>Experience</h2>
+            <p contenteditable="true" id="experience">Worked at XYZ company as a developer.</p>
+
+            <h2>Education</h2>
+            <p contenteditable="true" id="education">Bachelor's degree in Computer Science.</p>
+        </div>
+
+        <button id="download-btn">Download Resume as PDF</button>
+        <button id="share-btn">Share Resume</button>
+    </div>
+
+    <div id="share-popup" class="popup">
+        <div class="popup-content">
+            <span class="close-btn" id="close-popup">&times;</span>
+            <h2>Share Your Resume</h2>
+            <p>Click below to copy the unique link to share your resume:</p>
+            <input type="text" id="unique-link" readonly>
+            <button id="copy-link-btn">Copy Link</button>
+        </div>
+    </div>
+
+    <!-- Footer Section (Same as index.html) -->
+    <footer>
+        <p>&copy; 2024 My Resume. All rights reserved.</p>
+    </footer>
+
+    <script>
+  
+        window.onload = () => {
+            // Retrieve form data from sessionStorage
+            const resumeData = JSON.parse(sessionStorage.getItem('resumeData') || '{}');
+
+            // Populate the template with the data
+            document.getElementById('title').textContent = resumeData.title || 'No title provided';
+            document.getElementById('name').textContent = resumeData.name || 'No name provided';
+            document.getElementById('email').textContent = resumeData.email || 'No email provided';
+            document.getElementById('phone').textContent = resumeData.phone || 'No phone provided';
+            document.getElementById('age').textContent = resumeData.age ? `Age: ${resumeData.age}` : 'No age provided';
+
+            // Populate skills
+            const skillsList = document.getElementById('skills-list');
+            if (skillsList && resumeData.skills) {
+                skillsList.innerHTML = '';
+                resumeData.skills.split(',').forEach(skill => {
+                    const li = document.createElement('li');
+                    li.textContent = skill.trim();
+                    li.contentEditable = true;
+                    skillsList.appendChild(li);
+                });
+            }
+
+            document.getElementById('experience').textContent = resumeData.experience || 'No experience provided';
+            document.getElementById('education').textContent = resumeData.education || 'No education provided';
+
+            // Set profile image if provided
+            const profileImage = document.getElementById('profile-image');
+            if (profileImage && resumeData.image) {
+                profileImage.src = resumeData.image;
+            }
+
+            // Make profile image editable
+            const imgArea = document.getElementById('img-area');
+            const editProfileImage = document.getElementById('edit-profile-image');
+
+            if (imgArea && editProfileImage) {
+                imgArea.addEventListener('click', () => {
+                    editProfileImage.click();
+                });
+
+                editProfileImage.addEventListener('change', (event) => {
+                    const file = editProfileImage.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+
+                        reader.onload = () => {
+                            profileImage.src = reader.result;
+                            resumeData.image = reader.result;
+
+                            // Update sessionStorage with the new image
+                            sessionStorage.setItem('resumeData', JSON.stringify(resumeData));
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            // Automatically save changes on edit
+            const editableFields = document.querySelectorAll('[contenteditable="true"]');
+            editableFields.forEach(field => {
+                field.addEventListener('blur', () => {
+                    // Save the updated content to sessionStorage
+                    resumeData.name = document.getElementById('name').textContent;
+                    resumeData.title = document.getElementById('title').textContent;
+                    resumeData.email = document.getElementById('email').textContent;
+                    resumeData.phone = document.getElementById('phone').textContent;
+                    resumeData.age = document.getElementById('age').textContent.replace('Age: ', '');
+                    resumeData.skills = Array.from(document.querySelectorAll('#skills-list li')).map(li => li.textContent).join(', ');
+                    resumeData.experience = document.getElementById('experience').textContent;
+                    resumeData.education = document.getElementById('education').textContent;
+
+                    // Update sessionStorage
+                    sessionStorage.setItem('resumeData', JSON.stringify(resumeData));
+                });
+            });
+
+            // Download as PDF
+            const downloadBtn = document.getElementById('download-btn');
+            downloadBtn.addEventListener('click', () => {
+                const resumeContent = document.querySelector('.resume');
+                if (resumeContent) {
+                    html2pdf().from(resumeContent).save('resume.pdf');
+                }
+            });
+
+            // Share button functionality
+            const shareBtn = document.getElementById('share-btn');
+            const sharePopup = document.getElementById('share-popup');
+            const closePopupBtn = document.getElementById('close-popup');
+            const uniqueLinkInput = document.getElementById('unique-link');
+            const copyLinkBtn = document.getElementById('copy-link-btn');
+
+            shareBtn.addEventListener('click', () => {
+                // Generate a unique link (you can customize this logic)
+                const uniqueLink = `${window.location.origin}/resume/${Date.now()}`;
+
+                uniqueLinkInput.value = uniqueLink;
+                sharePopup.style.display = 'block';
+            });
+
+            closePopupBtn.addEventListener('click', () => {
+                sharePopup.style.display = 'none';
+            });
+
+            // Copy the link to clipboard
+            copyLinkBtn.addEventListener('click', () => {
+                uniqueLinkInput.select();
+                document.execCommand('copy');
+                alert('Link copied to clipboard!');
+            });
+
+            // Close the popup when clicking outside of it
+            window.addEventListener('click', (event) => {
+                if (event.target === sharePopup) {
+                    sharePopup.style.display = 'none';
+                }
+            });
+        };
+    </script>
+</body>
+</html>
